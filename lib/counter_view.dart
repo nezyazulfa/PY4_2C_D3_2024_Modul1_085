@@ -9,16 +9,16 @@ class CounterView extends StatefulWidget {
 }
 
 class _CounterViewState extends State<CounterView> {
-  final CounterController _controller = CounterController(); // Inisialisasi controller [cite: 170]
+  final CounterController _controller = CounterController();
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text("LogBook: Versi SRP & History"),
+        title: const Text("LogBook: SRP, History & UX"),
         backgroundColor: Theme.of(context).colorScheme.inversePrimary,
       ),
-      body: SingleChildScrollView( // Agar layar bisa di-scroll jika history penuh
+      body: SingleChildScrollView(
         child: Center(
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
@@ -29,7 +29,7 @@ class _CounterViewState extends State<CounterView> {
               
               const SizedBox(height: 20),
 
-              // TASK 1: Input Step [cite: 208]
+              // UI Input Step (Task 1) [cite: 208]
               Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 50),
                 child: TextField(
@@ -51,41 +51,78 @@ class _CounterViewState extends State<CounterView> {
               const Divider(),
               const Text("5 Aktivitas Terakhir:", style: TextStyle(fontWeight: FontWeight.bold)),
 
-              // TASK 2: Menampilkan History [cite: 220]
+              // UI Polishing: Warna berbeda untuk log (Homework) [cite: 227]
               Padding(
                 padding: const EdgeInsets.all(10.0),
                 child: Column(
-                  children: _controller.history.map((log) => Card(
-                    child: ListTile(
-                      leading: const Icon(Icons.label_important_outline),
-                      title: Text(log),
-                    ),
-                  )).toList(),
+                  children: _controller.history.map((log) {
+                    // Menentukan warna: Hijau untuk tambah, Merah untuk kurang [cite: 227]
+                    Color itemColor = log.contains("Tambah") ? Colors.green : 
+                                      log.contains("Kurang") ? Colors.red : 
+                                      Colors.blue;
+
+                    return Card(
+                      child: ListTile(
+                        leading: Icon(Icons.history, color: itemColor),
+                        title: Text(
+                          log,
+                          style: TextStyle(color: itemColor, fontWeight: FontWeight.w500),
+                        ),
+                      ),
+                    );
+                  }).toList(),
                 ),
               ),
             ],
           ),
         ),
       ),
+      // Susunan tombol dalam Column agar tidak hilang [cite: 108]
       floatingActionButton: Column(
         mainAxisAlignment: MainAxisAlignment.end,
         children: [
           FloatingActionButton(
-            heroTag: "btn1",
-            onPressed: () => setState(() => _controller.increment()), // Update UI real-time [cite: 223]
+            heroTag: "add",
+            onPressed: () => setState(() => _controller.increment()),
             child: const Icon(Icons.add),
           ),
           const SizedBox(height: 10),
           FloatingActionButton(
-            heroTag: "btn2",
+            heroTag: "remove",
             onPressed: () => setState(() => _controller.decrement()),
             child: const Icon(Icons.remove),
           ),
           const SizedBox(height: 10),
+          // UX Improvement: Dialog Konfirmasi (Homework) [cite: 228]
           FloatingActionButton(
-            heroTag: "btn3",
+            heroTag: "reset",
             backgroundColor: Colors.redAccent,
-            onPressed: () => setState(() => _controller.reset()),
+            onPressed: () {
+              showDialog(
+                context: context,
+                builder: (context) => AlertDialog(
+                  title: const Text("Konfirmasi Reset"),
+                  content: const Text("Yakin ingin menghapus semua data?"),
+                  actions: [
+                    TextButton(
+                      onPressed: () => Navigator.pop(context),
+                      child: const Text("Batal"),
+                    ),
+                    TextButton(
+                      onPressed: () {
+                        setState(() => _controller.reset());
+                        Navigator.pop(context);
+                        // SnackBar sebagai feedback tambahan [cite: 228]
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(content: Text("Data berhasil direset!")),
+                        );
+                      },
+                      child: const Text("Ya, Reset", style: TextStyle(color: Colors.red)),
+                    ),
+                  ],
+                ),
+              );
+            },
             child: const Icon(Icons.refresh),
           ),
         ],
