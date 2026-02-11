@@ -9,14 +9,14 @@ class CounterView extends StatefulWidget {
 }
 
 class _CounterViewState extends State<CounterView> {
-  final CounterController _controller = CounterController();
+  final CounterController _controller = CounterController(); // Inisialisasi controller [cite: 170]
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
         title: const Text("LogBook: SRP, History & UX"),
-        backgroundColor: Theme.of(context).colorScheme.inversePrimary,
+        backgroundColor: Theme.of(context).colorScheme.inversePrimary, // [cite: 113]
       ),
       body: SingleChildScrollView(
         child: Center(
@@ -25,7 +25,8 @@ class _CounterViewState extends State<CounterView> {
             children: [
               const SizedBox(height: 30),
               const Text("Total Hitungan:"),
-              Text('${_controller.value}', style: const TextStyle(fontSize: 50, fontWeight: FontWeight.bold)),
+              Text('${_controller.value}', 
+                  style: const TextStyle(fontSize: 50, fontWeight: FontWeight.bold)),
               
               const SizedBox(height: 20),
 
@@ -51,12 +52,12 @@ class _CounterViewState extends State<CounterView> {
               const Divider(),
               const Text("5 Aktivitas Terakhir:", style: TextStyle(fontWeight: FontWeight.bold)),
 
-              // UI Polishing: Warna berbeda untuk log (Homework) [cite: 227]
+              // UI Polishing: Warna berbeda untuk riwayat (Homework) 
               Padding(
                 padding: const EdgeInsets.all(10.0),
                 child: Column(
                   children: _controller.history.map((log) {
-                    // Menentukan warna: Hijau untuk tambah, Merah untuk kurang [cite: 227]
+                    // Hijau untuk Tambah, Merah untuk Kurang 
                     Color itemColor = log.contains("Tambah") ? Colors.green : 
                                       log.contains("Kurang") ? Colors.red : 
                                       Colors.blue;
@@ -64,36 +65,45 @@ class _CounterViewState extends State<CounterView> {
                     return Card(
                       child: ListTile(
                         leading: Icon(Icons.history, color: itemColor),
-                        title: Text(
-                          log,
-                          style: TextStyle(color: itemColor, fontWeight: FontWeight.w500),
-                        ),
+                        title: Text(log, style: TextStyle(color: itemColor)),
                       ),
                     );
                   }).toList(),
                 ),
               ),
+              const SizedBox(height: 100), 
             ],
           ),
         ),
       ),
-      // Susunan tombol dalam Column agar tidak hilang [cite: 108]
-      floatingActionButton: Column(
-        mainAxisAlignment: MainAxisAlignment.end,
+      
+      // Lokasi tombol di tengah bawah
+      floatingActionButtonLocation: FloatingActionButtonLocation.centerFloat,
+      
+      // Susunan tombol ke samping (Row) yang rapat di tengah
+      floatingActionButton: Row(
+        mainAxisAlignment: MainAxisAlignment.center,
         children: [
+          // Tombol Kurang (-)
+          FloatingActionButton(
+            heroTag: "remove",
+            backgroundColor: Colors.orange,
+            onPressed: () => setState(() => _controller.decrement()),
+            child: const Icon(Icons.remove),
+          ),
+
+          const SizedBox(width: 20), // Jarak antar tombol
+
+          // Tombol Tambah (+)
           FloatingActionButton(
             heroTag: "add",
             onPressed: () => setState(() => _controller.increment()),
             child: const Icon(Icons.add),
           ),
-          const SizedBox(height: 10),
-          FloatingActionButton(
-            heroTag: "remove",
-            onPressed: () => setState(() => _controller.decrement()),
-            child: const Icon(Icons.remove),
-          ),
-          const SizedBox(height: 10),
-          // UX Improvement: Dialog Konfirmasi (Homework) [cite: 228]
+
+          const SizedBox(width: 20), // Jarak antar tombol
+
+          // Tombol Reset dengan Dialog Konfirmasi (UX Improvement) 
           FloatingActionButton(
             heroTag: "reset",
             backgroundColor: Colors.redAccent,
@@ -112,7 +122,6 @@ class _CounterViewState extends State<CounterView> {
                       onPressed: () {
                         setState(() => _controller.reset());
                         Navigator.pop(context);
-                        // SnackBar sebagai feedback tambahan [cite: 228]
                         ScaffoldMessenger.of(context).showSnackBar(
                           const SnackBar(content: Text("Data berhasil direset!")),
                         );
