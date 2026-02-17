@@ -1,43 +1,45 @@
+import 'package:shared_preferences/shared_preferences.dart';
+
 class CounterController {
   int _counter = 0;
-  int _step = 1; // Variabel _step default 1 [cite: 206]
-  final List<String> _history = []; // List untuk menyimpan riwayat [cite: 218]
+  final List<String> _history = [];
 
-  int get value => _counter; // Getter akses data [cite: 155]
-  List<String> get history => _history; // Akses list riwayat [cite: 219]
+  int get value => _counter;
+  List<String> get history => _history;
 
-  void setStep(int newValue) {
-    _step = newValue; // Fungsi mengubah nilai _step [cite: 206]
+  // 1. Load Data Berdasarkan Username
+  Future<void> loadData(String username) async {
+    final prefs = await SharedPreferences.getInstance();
+    
+    // Key sekarang unik: username + _counter (Contoh: admin_counter)
+    _counter = prefs.getInt('${username}_counter') ?? 0;
+    
+    // Key riwayat juga unik: username + _history
+    List<String>? savedHistory = prefs.getStringList('${username}_history');
+    if (savedHistory != null) {
+      _history.clear();
+      _history.addAll(savedHistory);
+    } else {
+      _history.clear(); // Bersihkan jika user baru belum punya riwayat
+    }
+  }
+
+  // 2. Save Data Berdasarkan Username
+  Future<void> _saveToLocal(String username) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setInt('${username}_counter', _counter);
+    await prefs.setStringList('${username}_history', _history);
+  }
+
+  void increment(String username) {
+    _counter++;
+    _addLog("User $username menambah +1");
+    _saveToLocal(username); // Simpan ke laci milik user ini
   }
 
   void _addLog(String action) {
-    // Mengambil waktu saat ini untuk log yang informatif [cite: 219, 267]
     String time = DateTime.now().toString().substring(11, 16);
-    _history.insert(0, "$action (Step: $_step) pada $time"); // Data baru di posisi atas [cite: 267]
-    
-    // Membatasi hanya 5 aktivitas terakhir [cite: 221, 267]
-    if (_history.length > 5) {
-      _history.removeLast(); // Menghapus data tertua [cite: 267]
-    }
-  }
-
-  void increment() {
-    _counter += _step; // Logika tambah menggunakan _step [cite: 207]
-    _addLog("Tambah +");
-  }
-
-  void decrement() {
-    if (_counter >= _step) {
-      _counter -= _step; // Logika kurang menggunakan _step [cite: 207]
-      _addLog("Kurang -");
-    } else {
-      _counter = 0;
-      _addLog("Reset Otomatis (Batas 0)");
-    }
-  }
-
-  void reset() {
-    _counter = 0; // Mengembalikan nilai ke 0 [cite: 158]
-    _addLog("Reset Total");
+    _history.insert(0, "$action pada jam $time");
+    if (_history.length > 5) _history.removeLast();
   }
 }

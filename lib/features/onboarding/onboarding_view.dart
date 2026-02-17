@@ -11,29 +11,28 @@ class OnboardingView extends StatefulWidget {
 class _OnboardingViewState extends State<OnboardingView> {
   int step = 1;
 
-  // Data konten Onboarding (Gambar, Judul, dan Deskripsi)
   final List<Map<String, String>> onboardingData = [
     {
       "image": "assets/Gambar1.png",
       "title": "Catat Aktivitas",
-      "desc": "Pantau semua kegiatan harianmu dengan mudah dan cepat."
+      "desc": "Pantau semua kegiatan harianmu dengan mudah."
     },
     {
       "image": "assets/Gambar2.png",
       "title": "Keamanan Terjamin",
-      "desc": "Data logbook kamu tersimpan aman dengan sistem Gatekeeper."
+      "desc": "Data tersimpan aman dengan sistem Gatekeeper."
     },
     {
       "image": "assets/Gambar3.png",
       "title": "Riwayat Tersimpan",
-      "desc": "Jangan takut kehilangan data, aplikasi akan mengingat angka terakhirmu."
+      "desc": "Aplikasi mengingat angka terakhirmu meski ditutup."
     },
   ];
 
   void _nextStep() {
     setState(() {
       if (step < 3) {
-        step++; 
+        step++;
       } else {
         Navigator.pushReplacement(
           context,
@@ -52,16 +51,13 @@ class _OnboardingViewState extends State<OnboardingView> {
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              // Menampilkan Gambar sesuai langkah
               Image.asset(
                 onboardingData[step - 1]["image"]!,
                 height: 300,
                 errorBuilder: (context, error, stackTrace) => 
                   const Icon(Icons.image, size: 200, color: Colors.grey),
               ),
-              
               const SizedBox(height: 40),
-
               Text(
                 onboardingData[step - 1]["title"]!,
                 style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
@@ -72,10 +68,7 @@ class _OnboardingViewState extends State<OnboardingView> {
                 textAlign: TextAlign.center,
                 style: const TextStyle(fontSize: 16, color: Colors.grey),
               ),
-
               const SizedBox(height: 40),
-
-              // Page Indicator (Titik Indikator)
               Row(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: List.generate(3, (index) {
@@ -90,19 +83,12 @@ class _OnboardingViewState extends State<OnboardingView> {
                   );
                 }),
               ),
-
               const SizedBox(height: 50),
-
               SizedBox(
                 width: double.infinity,
                 height: 50,
                 child: ElevatedButton(
                   onPressed: _nextStep,
-                  style: ElevatedButton.styleFrom(
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(10),
-                    ),
-                  ),
                   child: Text(step == 3 ? "Mulai Sekarang" : "Lanjut"),
                 ),
               ),
