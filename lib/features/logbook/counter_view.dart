@@ -13,29 +13,42 @@ class CounterView extends StatefulWidget {
 class _CounterViewState extends State<CounterView> {
   final CounterController _controller = CounterController();
 
-  // --- BAGIAN PENTING UNTUK DATA PERSISTENCE ---
+  // --- LOGIKA WELCOME BANNER (Homework Poin 3) ---
+  String _getGreeting() {
+    var hour = DateTime.now().hour;
+    if (hour >= 6 && hour < 11) return "Selamat Pagi";
+    if (hour >= 11 && hour < 15) return "Selamat Siang";
+    if (hour >= 15 && hour < 18) return "Selamat Sore";
+    return "Selamat Malam";
+  }
+
   @override
   void initState() {
     super.initState();
-    _loadInitialData(); // Dipanggil satu kali saja saat halaman dibuka
+    _loadInitialData(); 
   }
 
-  // Hanya butuh SATU fungsi _loadInitialData
   void _loadInitialData() async {
-    // Pastikan mengirim widget.username agar angka tiap user berbeda
+    // Memuat data sesuai username agar angka antar akun berbeda
     await _controller.loadData(widget.username); 
     if (mounted) {
       setState(() {}); 
     }
   }
-  // --------------------------------------------
 
   @override
   Widget build(BuildContext context) {
+    // Definisi Warna dari Palette Nezya
+    const Color navyColor = Color(0xFF2F4156);
+    const Color tealColor = Color(0xFF567C8D);
+    const Color beigeColor = Color(0xFFF5EFEB);
+
     return Scaffold(
+      backgroundColor: beigeColor,
       appBar: AppBar(
         title: Text("Logbook: ${widget.username}"),
-        backgroundColor: Theme.of(context).colorScheme.inversePrimary,
+        backgroundColor: tealColor,
+        foregroundColor: Colors.white,
         actions: [
           IconButton(
             icon: const Icon(Icons.logout),
@@ -45,7 +58,7 @@ class _CounterViewState extends State<CounterView> {
                 builder: (BuildContext context) {
                   return AlertDialog(
                     title: const Text("Konfirmasi Logout"),
-                    content: const Text("Apakah Anda yakin? Data yang belum disimpan mungkin akan hilang."),
+                    content: const Text("Apakah Anda yakin?"),
                     actions: [
                       TextButton(
                         onPressed: () => Navigator.pop(context),
@@ -54,7 +67,6 @@ class _CounterViewState extends State<CounterView> {
                       TextButton(
                         onPressed: () {
                           Navigator.pop(context); 
-                          // Navigasi logout dan bersihkan tumpukan halaman [cite: 128, 129]
                           Navigator.pushAndRemoveUntil(
                             context,
                             MaterialPageRoute(builder: (context) => const OnboardingView()),
@@ -76,26 +88,82 @@ class _CounterViewState extends State<CounterView> {
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             const SizedBox(height: 20),
-            Text("Selamat Datang, ${widget.username}!"),
-            const SizedBox(height: 10),
-            const Text("Total Hitungan Anda:"),
-            Text(
-              '${_controller.value}',
-              style: Theme.of(context).textTheme.headlineLarge,
-            ),
-            const Divider(height: 40, thickness: 2),
-            const Text("Riwayat Aktivitas (Log):", style: TextStyle(fontWeight: FontWeight.bold)),
+            Text("${_getGreeting()}, ${widget.username}!", 
+                style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: navyColor)),
+            const Text("Sekarang saya sedang mengerjakan proyek 4"),
+            const SizedBox(height: 20),
+
+            // --- Tampilan Angka Counter ---
+            Text('${_controller.value}', 
+                style: const TextStyle(fontSize: 80, fontWeight: FontWeight.bold, color: navyColor)),
             
-            // --- MENAMPILKAN HISTORY LOG (TASK 3) ---
+            const SizedBox(height: 10),
+
+            // --- Pengaturan Custom Step (Slider) ---
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 40),
+              child: Column(
+                children: [
+                  Text("Besar Langkah (Step): ${_controller.step}"),
+                  Slider(
+                    value: _controller.step.toDouble(),
+                    min: 1,
+                    max: 10,
+                    divisions: 9,
+                    activeColor: tealColor,
+                    onChanged: (value) {
+                      setState(() {
+                        _controller.step = value.toInt();
+                      });
+                    },
+                  ),
+                ],
+              ),
+            ),
+
+            const SizedBox(height: 10),
+
+            // --- Tombol Utama: Kurang, Reset, Tambah ---
+            Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                // Tombol Kurang (Decrement)
+                ElevatedButton(
+                  style: ElevatedButton.styleFrom(backgroundColor: Colors.red[400], foregroundColor: Colors.white),
+                  onPressed: () => setState(() => _controller.decrement(widget.username)),
+                  child: const Icon(Icons.remove),
+                ),
+                const SizedBox(width: 15),
+                // Tombol Reset
+                ElevatedButton(
+                  style: ElevatedButton.styleFrom(backgroundColor: Colors.grey[600], foregroundColor: Colors.white),
+                  onPressed: () => setState(() => _controller.reset(widget.username)),
+                  child: const Text("Reset"),
+                ),
+                const SizedBox(width: 15),
+                // Tombol Tambah (Increment)
+                ElevatedButton(
+                  style: ElevatedButton.styleFrom(backgroundColor: navyColor, foregroundColor: Colors.white),
+                  onPressed: () => setState(() => _controller.increment(widget.username)),
+                  child: const Icon(Icons.add),
+                ),
+              ],
+            ),
+
+            const Divider(height: 40, thickness: 2, indent: 50, endIndent: 50),
+            const Text("Riwayat Aktivitas (Log):", style: TextStyle(fontWeight: FontWeight.bold, color: navyColor)),
+            
+            // --- ListView History Log ---
             Expanded(
               child: ListView.builder(
-                padding: const EdgeInsets.all(10),
+                padding: const EdgeInsets.all(15),
                 itemCount: _controller.history.length,
                 itemBuilder: (context, index) {
                   return Card(
+                    elevation: 2,
                     child: ListTile(
-                      leading: const Icon(Icons.history),
-                      title: Text(_controller.history[index]), // Menampilkan isi riwayat [cite: 163]
+                      leading: const Icon(Icons.history, color: tealColor),
+                      title: Text(_controller.history[index], style: const TextStyle(fontSize: 14)),
                     ),
                   );
                 },
@@ -103,11 +171,6 @@ class _CounterViewState extends State<CounterView> {
             ),
           ],
         ),
-      ),
-      floatingActionButton: FloatingActionButton(
-        // Panggil fungsi increment dan kirim nama user untuk dicatat [cite: 125]
-        onPressed: () => setState(() => _controller.increment(widget.username)),
-        child: const Icon(Icons.add),
       ),
     );
   }
