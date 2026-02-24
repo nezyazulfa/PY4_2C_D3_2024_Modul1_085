@@ -1,29 +1,31 @@
 class LogModel {
   final String title;
-  final String date; // Berfungsi sebagai timestamp 
+  final String date;
   final String description;
+  final String category; // Tambahkan properti kategori
 
   LogModel({
     required this.title,
     required this.date,
     required this.description,
+    this.category = 'Pribadi', // Default kategori
   });
 
-  // Konversi Map (JSON) ke Object untuk Task 4 [cite: 93]
   factory LogModel.fromMap(Map<String, dynamic> map) {
     return LogModel(
       title: map['title'] ?? '',
       date: map['date'] ?? '',
       description: map['description'] ?? '',
+      category: map['category'] ?? 'Pribadi',
     );
   }
 
-  // Konversi Object ke Map (JSON) untuk disimpan [cite: 93]
   Map<String, dynamic> toMap() {
     return {
       'title': title,
       'date': date,
       'description': description,
+      'category': category,
     };
   }
 }

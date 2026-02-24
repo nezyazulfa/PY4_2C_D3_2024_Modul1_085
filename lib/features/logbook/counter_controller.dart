@@ -1,5 +1,4 @@
 import 'package:shared_preferences/shared_preferences.dart';
-import 'models/log_model.dart';
 
 class CounterController {
   int _counter = 0;
