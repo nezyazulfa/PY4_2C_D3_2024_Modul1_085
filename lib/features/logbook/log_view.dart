@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'log_controller.dart';
 import 'models/log_model.dart';
-import '../auth/login_view.dart'; // Pastikan import ini benar untuk navigasi logout
+import '../auth/login_view.dart'; // Pastikan path ini sesuai dengan struktur folder Anda
 
 class LogView extends StatefulWidget {
   const LogView({super.key});
@@ -24,7 +24,7 @@ class _LogViewState extends State<LogView> {
 
   @override
   void dispose() {
-    _titleController.dispose(); // [cite: 139]
+    _titleController.dispose(); // Menghindari kebocoran memori [cite: 139]
     _contentController.dispose(); // [cite: 139]
     super.dispose();
   }
@@ -45,8 +45,7 @@ class _LogViewState extends State<LogView> {
           ),
           TextButton(
             onPressed: () {
-              Navigator.pop(context); // Tutup dialog
-              // Kembali ke halaman Login dan hapus semua tumpukan halaman
+              Navigator.pop(context); 
               Navigator.pushReplacement(
                 context,
                 MaterialPageRoute(builder: (context) => const LoginView()),
@@ -59,7 +58,7 @@ class _LogViewState extends State<LogView> {
     );
   }
 
-  // --- FUNGSI TAMBAH CATATAN [cite: 111] ---
+  // --- FUNGSI TAMBAH CATATAN (TASK 2) [cite: 111, 166] ---
   void _showAddLogDialog() {
     showDialog(
       context: context,
@@ -89,7 +88,8 @@ class _LogViewState extends State<LogView> {
             style: ElevatedButton.styleFrom(backgroundColor: navyColor),
             onPressed: () {
               if (_titleController.text.isNotEmpty) {
-                _controller.addLog(_titleController.text, _contentController.text); // [cite: 99, 111]
+                // Menambahkan log baru dengan timestamp otomatis di controller [cite: 99]
+                _controller.addLog(_titleController.text, _contentController.text);
                 _titleController.clear();
                 _contentController.clear();
                 Navigator.pop(context);
@@ -102,7 +102,7 @@ class _LogViewState extends State<LogView> {
     );
   }
 
-  // --- FUNGSI EDIT CATATAN [cite: 112, 119] ---
+  // --- FUNGSI EDIT CATATAN (TASK 2) [cite: 112, 166] ---
   void _showEditLogDialog(int index, LogModel log) {
     _titleController.text = log.title;
     _contentController.text = log.description;
@@ -124,7 +124,7 @@ class _LogViewState extends State<LogView> {
           ElevatedButton(
             style: ElevatedButton.styleFrom(backgroundColor: tealColor),
             onPressed: () {
-              _controller.updateLog(index, _titleController.text, _contentController.text); // [cite: 99, 112]
+              _controller.updateLog(index, _titleController.text, _contentController.text);
               _titleController.clear();
               _contentController.clear();
               Navigator.pop(context);
@@ -136,7 +136,7 @@ class _LogViewState extends State<LogView> {
     );
   }
 
-  // --- FUNGSI KONFIRMASI HAPUS ---
+  // --- FUNGSI KONFIRMASI HAPUS (TASK 2)  ---
   void _showDeleteConfirmDialog(int index) {
     showDialog(
       context: context,
@@ -153,7 +153,7 @@ class _LogViewState extends State<LogView> {
           ElevatedButton(
             style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
             onPressed: () {
-              _controller.removeLog(index); // [cite: 99, 118]
+              _controller.removeLog(index); 
               Navigator.pop(context);
               ScaffoldMessenger.of(context).showSnackBar(
                 const SnackBar(content: Text("Catatan berhasil dihapus")),
@@ -175,7 +175,6 @@ class _LogViewState extends State<LogView> {
           style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
         backgroundColor: navyColor,
         centerTitle: true,
-        // TOMBOL LOGOUT DI KANAN APPBAR
         actions: [
           IconButton(
             icon: const Icon(Icons.logout, color: Colors.white),
@@ -183,7 +182,7 @@ class _LogViewState extends State<LogView> {
           ),
         ],
       ),
-      // Reactive UI menggunakan ValueListenableBuilder [cite: 101, 105]
+      // Reactive UI menggunakan ValueListenableBuilder [cite: 101, 105, 176]
       body: ValueListenableBuilder<List<LogModel>>(
         valueListenable: _controller.logsNotifier,
         builder: (context, currentLogs, child) {
@@ -193,12 +192,13 @@ class _LogViewState extends State<LogView> {
                 style: TextStyle(color: tealColor, fontSize: 16)),
             );
           }
+          // Menggunakan ListView.builder untuk rendering dinamis yang efisien [cite: 47, 53, 167]
           return ListView.builder(
             padding: const EdgeInsets.all(10),
-            itemCount: currentLogs.length, // [cite: 105]
+            itemCount: currentLogs.length, 
             itemBuilder: (context, index) {
               final log = currentLogs[index];
-              return Card(
+              return Card( // Widget Card untuk membungkus setiap item [cite: 49, 167]
                 elevation: 3,
                 margin: const EdgeInsets.only(bottom: 10),
                 child: ListTile(
@@ -208,8 +208,18 @@ class _LogViewState extends State<LogView> {
                   ),
                   title: Text(log.title, 
                     style: const TextStyle(fontWeight: FontWeight.bold, color: navyColor)),
-                  subtitle: Text(log.description),
-                  // Langkah 5: Interaksi Edit dan Delete [cite: 115, 122]
+                  // Menampilkan deskripsi dan timestamp (3 properti terpenuhi) 
+                  subtitle: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(log.description),
+                      const SizedBox(height: 4),
+                      Text(
+                        "Dibuat: ${log.date.split('.')[0]}", // Menampilkan waktu tanpa milidetik
+                        style: const TextStyle(fontSize: 11, color: Colors.grey),
+                      ),
+                    ],
+                  ),
                   trailing: Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
