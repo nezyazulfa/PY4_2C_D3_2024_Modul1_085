@@ -1,89 +1,70 @@
 import 'package:flutter/material.dart';
-import 'package:logbook_app_001/features/auth/login_controller.dart';
-import 'package:logbook_app_001/features/logbook/counter_view.dart';
+import '../logbook/log_view.dart';
 
-class LoginView extends StatefulWidget {
+class LoginView extends StatelessWidget {
   const LoginView({super.key});
 
   @override
-  State<LoginView> createState() => _LoginViewState();
-}
-
-class _LoginViewState extends State<LoginView> {
-  final LoginController _controller = LoginController();
-  final TextEditingController _userController = TextEditingController();
-  final TextEditingController _passController = TextEditingController();
-  
-  bool _isObscure = true; 
-
-  void _handleLogin() async {
-    String user = _userController.text;
-    String pass = _passController.text;
-
-    // Validasi input tidak boleh kosong [cite: 148]
-    if (user.isEmpty || pass.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text("Username dan Password tidak boleh kosong!")),
-      );
-      return;
-    }
-
-    bool isSuccess = _controller.login(user, pass);
-
-    if (isSuccess) {
-      // Navigasi ke CounterView dengan mengirim data username [cite: 120, 122]
-      Navigator.pushReplacement(
-        context,
-        MaterialPageRoute(builder: (context) => CounterView(username: user)),
-      );
-    } else {
-      // Cek batas percobaan login 
-      if (_controller.failedAttempts >= 3) {
-        setState(() {}); 
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text("Terlalu banyak percobaan. Tunggu 10 detik.")),
-        );
-        await _controller.lockAccount(); 
-        setState(() {}); 
-      } else {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text("Login Gagal! Akun tidak ditemukan.")),
-        );
-      }
-    }
-  }
-
-  @override
   Widget build(BuildContext context) {
+    // Palette Warna Nezya
+    const Color navyColor = Color(0xFF2F4156);
+    const Color beigeColor = Color(0xFFF5EFEB);
+
     return Scaffold(
-      appBar: AppBar(title: const Text("Login Portal")),
-      body: Padding(
-        padding: const EdgeInsets.all(16.0),
-        child: Column(
-          children: [
-            TextField(
-              controller: _userController,
-              decoration: const InputDecoration(labelText: "Username"),
-            ),
-            TextField(
-              controller: _passController,
-              obscureText: _isObscure, 
-              decoration: InputDecoration(
-                labelText: "Password",
-                // Fitur Show/Hide Password [cite: 150]
-                suffixIcon: IconButton(
-                  icon: Icon(_isObscure ? Icons.visibility_off : Icons.visibility),
-                  onPressed: () => setState(() => _isObscure = !_isObscure),
+      backgroundColor: beigeColor,
+      body: Center(
+        child: Padding(
+          padding: const EdgeInsets.all(30.0),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              const Icon(Icons.lock_person_rounded, size: 80, color: navyColor),
+              const SizedBox(height: 20),
+              const Text(
+                "Login Gatekeeper", // [cite: 134]
+                style: TextStyle(fontSize: 28, fontWeight: FontWeight.bold, color: navyColor),
+              ),
+              const SizedBox(height: 40),
+              TextField(
+                decoration: InputDecoration(
+                  labelText: "Username",
+                  filled: true,
+                  fillColor: Colors.white,
+                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(15)),
                 ),
               ),
-            ),
-            const SizedBox(height: 20),
-            ElevatedButton(
-              // Tombol nonaktif jika dalam masa cooldown 
-              onPressed: _controller.isLocked ? null : _handleLogin,
-              child: Text(_controller.isLocked ? "Terkunci..." : "Masuk"),
-            ),
-          ],
+              const SizedBox(height: 20),
+              TextField(
+                obscureText: true,
+                decoration: InputDecoration(
+                  labelText: "Password",
+                  filled: true,
+                  fillColor: Colors.white,
+                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(15)),
+                ),
+              ),
+              const SizedBox(height: 40),
+              SizedBox(
+                width: double.infinity,
+                child: ElevatedButton(
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: navyColor,
+                    foregroundColor: Colors.white,
+                    padding: const EdgeInsets.symmetric(vertical: 15),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
+                  ),
+                  onPressed: () {
+                    // Masuk ke halaman Logbook (Modul 3)
+                    Navigator.pushReplacement(
+                      context,
+                      MaterialPageRoute(builder: (context) => const LogView()),
+                    );
+                  },
+                  child: const Text("Masuk", style: TextStyle(fontSize: 18)),
+                ),
+              ),
+            ],
+          ),
         ),
       ),
     );
