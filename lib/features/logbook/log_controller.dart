@@ -1,85 +1,55 @@
-import 'dart:convert'; // Library wajib untuk jsonEncode & jsonDecode
 import 'package:flutter/material.dart';
-import 'package:shared_preferences/shared_preferences.dart';
+import 'package:logbook_app_001/services/mongo_service.dart';
 import 'models/log_model.dart';
 
 class LogController {
-  // Notifier reaktif agar UI otomatis terupdate (Task 3)
-  final ValueNotifier<List<LogModel>> logsNotifier = ValueNotifier<List<LogModel>>([]);
-  static const String _storageKey = 'user_logs_data';
+  final ValueNotifier<List<LogModel>> logsNotifier = ValueNotifier([]);
+  final ValueNotifier<List<LogModel>> filteredLogsNotifier = ValueNotifier([]);
+  final MongoService _mongoService = MongoService();
 
-  LogController() {
-    loadFromDisk(); // Restoration: Memuat data saat aplikasi dibuka
+  // Ganti loadFromDisk menjadi loadLogs agar sinkron dengan LogView
+  Future<void> loadLogs() async {
+    final logs = await _mongoService.getLogs();
+    logsNotifier.value = logs;
+    filteredLogsNotifier.value = logs;
   }
 
-  void addLog(String title, String desc) {
+  void filterLogs(String query) {
+    filteredLogsNotifier.value = logsNotifier.value
+        .where((log) => log.title.toLowerCase().contains(query.toLowerCase()))
+        .toList();
+  }
+
+  // PENTING: Gunakan Future<void> agar bisa di-await di UI
+  Future<void> addLog(String title, String desc, String category) async {
     final newLog = LogModel(
-      title: title, 
-      description: desc, 
+      title: title,
+      description: desc,
       date: DateTime.now().toString(),
+      category: category,
     );
-    logsNotifier.value = [...logsNotifier.value, newLog]; 
-    saveToDisk(); // Menyimpan setiap ada perubahan
+    await _mongoService.insertLog(newLog);
+    await loadLogs(); // Refresh data
   }
 
-  void updateLog(int index, String title, String desc) {
-    final currentLogs = List<LogModel>.from(logsNotifier.value);
-    currentLogs[index] = LogModel(
-      title: title, 
-      description: desc, 
+  Future<void> updateLog(int index, String title, String desc, String category) async {
+    final target = filteredLogsNotifier.value[index];
+    final updated = LogModel(
+      id: target.id, 
+      title: title,
+      description: desc,
       date: DateTime.now().toString(),
+      category: category,
     );
-    logsNotifier.value = currentLogs;
-    saveToDisk(); 
+    await _mongoService.updateLog(updated);
+    await loadLogs();
   }
 
-  void removeLog(int index) {
-    final currentLogs = List<LogModel>.from(logsNotifier.value);
-    currentLogs.removeAt(index);
-    logsNotifier.value = currentLogs;
-    saveToDisk();
-  }
-
-  // --- TASK 4: VERIFIKASI ENCODING (OBJECT -> JSON) ---
-  Future<void> saveToDisk() async {
-    try {
-      final prefs = await SharedPreferences.getInstance();
-      
-      // Mengonversi List of LogModel menjadi String JSON
-      final String encodedData = jsonEncode(
-        logsNotifier.value.map((e) => e.toMap()).toList(),
-      );
-      
-      // Bukti Encoding Berhasil: Muncul di Debug Console
-      debugPrint("✅ ENCODING SUCCESS: $encodedData");
-      
-      await prefs.setString(_storageKey, encodedData); // Simpan ke memori lokal
-    } catch (e) {
-      debugPrint("❌ ENCODING ERROR: $e");
-    }
-  }
-
-  // --- TASK 4: VERIFIKASI DECODING (JSON -> OBJECT) ---
-  Future<void> loadFromDisk() async {
-    try {
-      final prefs = await SharedPreferences.getInstance();
-      final String? data = prefs.getString(_storageKey);
-      
-      // Bukti Data Ditemukan di Disk
-      debugPrint("📂 DATA FROM DISK: $data");
-
-      if (data != null) {
-        // Decoding String JSON kembali menjadi List
-        final List decoded = jsonDecode(data); 
-        
-        // Bukti Decoding Berhasil: Menghitung jumlah item
-        debugPrint("✅ DECODING SUCCESS: Berhasil memuat ${decoded.length} catatan.");
-        
-        // Mengubah kembali data Map menjadi Object LogModel
-        logsNotifier.value = decoded.map((e) => LogModel.fromMap(e)).toList();
-      }
-    } catch (e) {
-      debugPrint("❌ DECODING ERROR: $e");
+  Future<void> removeLog(int index) async {
+    final target = filteredLogsNotifier.value[index];
+    if (target.id != null) {
+      await _mongoService.deleteLog(target.id!);
+      await loadLogs();
     }
   }
 }
