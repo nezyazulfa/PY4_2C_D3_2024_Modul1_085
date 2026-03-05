@@ -1,35 +1,65 @@
 import 'package:mongo_dart/mongo_dart.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import '../features/logbook/models/log_model.dart';
+import '../helpers/log_helper.dart'; // Import Helper
 
 class MongoService {
   static final MongoService _instance = MongoService._internal();
   Db? _db;
   DbCollection? _collection;
+  final String _src = "mongo_service.dart";
 
   factory MongoService() => _instance;
   MongoService._internal();
 
   Future<void> connect() async {
-    final uri = dotenv.env['MONGODB_URI'];
-    _db = await Db.create(uri!);
-    await _db!.open();
-    _collection = _db!.collection('logs');
+    if (_db != null && _db!.isConnected) return;
+    try {
+      final uri = dotenv.env['MONGODB_URI'];
+      if (uri == null) throw Exception("URI tidak ditemukan di .env!");
+
+      _db = await Db.create(uri);
+      await _db!.open();
+      _collection = _db!.collection('logs');
+      
+      // Smart Logger: Sukses Koneksi
+      await LogHelper.writeLog("DATABASE: Berhasil Terhubung ke Cluster", source: _src, level: 2);
+    } catch (e) {
+      await LogHelper.writeLog("DATABASE: Koneksi Gagal - $e", source: _src, level: 1);
+    }
   }
 
-  // Penting: Kembalikan List<LogModel>, bukan List<Map>
   Future<List<LogModel>> getLogs() async {
-    final data = await _collection!.find().toList();
+    if (_collection == null) await connect();
+    // Verbosity Control (Level 3)
+    await LogHelper.writeLog("CRUD: Mengambil semua dokumen...", source: _src, level: 3);
+    
+    final data = await _collection?.find().toList() ?? [];
     return data.map((json) => LogModel.fromMap(json)).toList();
   }
 
-  Future<void> insertLog(LogModel log) async => await _collection!.insertOne(log.toMap());
+  Future<void> insertLog(Map<String, dynamic> data) async {
+    if (_collection == null) await connect();
+    await _collection?.insertOne(data);
+    await LogHelper.writeLog("CRUD: Menambah data baru: ${data['title']}", source: _src, level: 2);
+  }
   
   Future<void> updateLog(LogModel log) async {
-    if (log.id != null) await _collection!.replaceOne(where.id(log.id!), log.toMap());
+    if (_collection == null) await connect();
+    if (log.id != null) {
+      await _collection!.replaceOne(where.id(log.id!), log.toMap());
+      await LogHelper.writeLog("CRUD: Memperbarui data ID: ${log.id}", source: _src, level: 2);
+    }
   }
 
-  Future<void> deleteLog(ObjectId id) async => await _collection!.remove(where.id(id));
+  Future<void> deleteLog(ObjectId id) async {
+    if (_collection == null) await connect();
+    await _collection!.remove(where.id(id));
+    await LogHelper.writeLog("CRUD: Menghapus data ID: $id", source: _src, level: 2);
+  }
   
-  Future<void> close() async => await _db?.close();
+  Future<void> close() async {
+    await _db?.close();
+    await LogHelper.writeLog("DATABASE: Koneksi ditutup", source: _src, level: 3);
+  }
 }

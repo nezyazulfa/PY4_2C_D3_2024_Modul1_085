@@ -1,8 +1,11 @@
 import 'package:flutter/material.dart';
-// Sesuaikan path import dengan struktur folder baru
-import 'package:logbook_app_001/features/onboarding/onboarding_view.dart';
+import 'package:flutter_dotenv/flutter_dotenv.dart';
+import 'features/onboarding/onboarding_view.dart';
 
-void main() {
+Future<void> main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  // Muat konfigurasi MongoDB sebelum aplikasi jalan
+  await dotenv.load(fileName: ".env"); 
   runApp(const MyApp());
 }
 
@@ -12,12 +15,11 @@ class MyApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'LogBook App',
       debugShowCheckedModeBanner: false,
-      theme: ThemeData(
-        colorScheme: ColorScheme.fromSeed(seedColor: Colors.indigo),
-      ),
-      home: const OnboardingView(),
+      title: 'Logbook Nezya',
+      theme: ThemeData(primarySwatch: Colors.blue),
+      // Mulai dari Onboarding
+      home: const OnboardingView(), 
     );
   }
 }

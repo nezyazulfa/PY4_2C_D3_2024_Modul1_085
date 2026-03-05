@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'log_controller.dart';
 import 'models/log_model.dart';
 import '../auth/login_view.dart';
-import '../../services/mongo_service.dart'; // Pastikan path ini benar
+import '../../services/mongo_service.dart'; 
 
 class LogView extends StatefulWidget {
   const LogView({super.key});
@@ -31,12 +31,16 @@ class _LogViewState extends State<LogView> {
     _initCloud();
   }
 
-  // Koneksi awal ke MongoDB Atlas
   Future<void> _initCloud() async {
     setState(() => _isLoading = true);
-    await MongoService().connect();
-    await _controller.loadLogs(); // Panggil fungsi load dari Controller
-    setState(() => _isLoading = false);
+    try {
+      await MongoService().connect(); 
+      await _controller.loadLogs();   
+    } catch (e) {
+      debugPrint("Koneksi Cloud Gagal: $e");
+    } finally {
+      if (mounted) setState(() => _isLoading = false); 
+    }
   }
 
   @override
@@ -48,9 +52,9 @@ class _LogViewState extends State<LogView> {
 
   Color _getCategoryColor(String category) {
     switch (category) {
-      case 'Urgent': return Colors.red.withOpacity(0.1);
-      case 'Pekerjaan': return Colors.blue.withOpacity(0.1);
-      default: return Colors.green.withOpacity(0.1);
+      case 'Urgent': return Colors.red.withValues(alpha: 0.1);
+      case 'Pekerjaan': return Colors.blue.withValues(alpha: 0.1);
+      default: return Colors.green.withValues(alpha: 0.1);
     }
   }
 
@@ -60,12 +64,15 @@ class _LogViewState extends State<LogView> {
       builder: (context) => AlertDialog(
         backgroundColor: beigeColor,
         title: const Text("Logout", style: TextStyle(color: navyColor, fontWeight: FontWeight.bold)),
-        content: const Text("Yakin ingin keluar dari Gatekeeper?"),
+        content: const Text("Yakin ingin keluar?"),
         actions: [
           TextButton(onPressed: () => Navigator.pop(context), child: const Text("Batal")),
           TextButton(
             onPressed: () => Navigator.pushAndRemoveUntil(
-              context, MaterialPageRoute(builder: (context) => const LoginView()), (r) => false),
+              context, 
+              MaterialPageRoute(builder: (context) => const LoginView()), 
+              (route) => false,
+            ),
             child: const Text("Keluar", style: TextStyle(color: Colors.red)),
           ),
         ],
@@ -73,7 +80,7 @@ class _LogViewState extends State<LogView> {
     );
   }
 
-  // --- FUNGSI TAMBAH (FIX: Menggunakan toMap()) ---
+  // --- BAGIAN 1: DIALOG TAMBAH (onPressed di baris 108-an) ---
   void _showAddLogDialog() {
     _titleController.clear();
     _contentController.clear();
@@ -104,9 +111,15 @@ class _LogViewState extends State<LogView> {
               style: ElevatedButton.styleFrom(backgroundColor: navyColor),
               onPressed: () async {
                 if (_titleController.text.isNotEmpty) {
-                  // Kirim data ke Controller (Controller yang akan panggil toMap)
-                  await _controller.addLog(_titleController.text, _contentController.text, _selectedCategory);
-                  if (mounted) Navigator.pop(context);
+                  // Menunggu proses simpan selesai
+                  await _controller.addLog(
+                    _titleController.text, 
+                    _contentController.text, 
+                    _selectedCategory
+                  );
+                  // Cek validasi konteks (Fix Baris 120-an)
+                  if (!context.mounted) return; 
+                  Navigator.pop(context);
                 }
               },
               child: const Text("Simpan ke Cloud", style: TextStyle(color: Colors.white)),
@@ -117,7 +130,7 @@ class _LogViewState extends State<LogView> {
     );
   }
 
-  // --- FUNGSI EDIT ---
+  // --- BAGIAN 2: DIALOG EDIT (onPressed di baris 160-an) ---
   void _showEditLogDialog(int index, LogModel log) {
     _titleController.text = log.title;
     _contentController.text = log.description;
@@ -147,8 +160,16 @@ class _LogViewState extends State<LogView> {
             ElevatedButton(
               style: ElevatedButton.styleFrom(backgroundColor: tealColor),
               onPressed: () async {
-                await _controller.updateLog(index, _titleController.text, _contentController.text, _selectedCategory);
-                if (mounted) Navigator.pop(context);
+                // Menunggu proses update selesai
+                await _controller.updateLog(
+                  index, 
+                  _titleController.text, 
+                  _contentController.text, 
+                  _selectedCategory
+                );
+                // Cek validasi konteks (Fix Baris 166-an)
+                if (!context.mounted) return;
+                Navigator.pop(context);
               },
               child: const Text("Update", style: TextStyle(color: Colors.white)),
             ),
@@ -170,7 +191,6 @@ class _LogViewState extends State<LogView> {
       ),
       body: Column(
         children: [
-          // SEARCH BAR
           Padding(
             padding: const EdgeInsets.all(12.0),
             child: TextField(
@@ -186,7 +206,7 @@ class _LogViewState extends State<LogView> {
           ),
           Expanded(
             child: _isLoading 
-            ? const Center(child: CircularProgressIndicator(color: tealColor)) // Loading state
+            ? const Center(child: CircularProgressIndicator(color: tealColor)) 
             : ValueListenableBuilder<List<LogModel>>(
                 valueListenable: _controller.filteredLogsNotifier,
                 builder: (context, currentLogs, child) {
@@ -213,14 +233,23 @@ class _LogViewState extends State<LogView> {
                         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
                         margin: const EdgeInsets.only(bottom: 10),
                         child: ListTile(
-                          leading: const CircleAvatar(backgroundColor: navyColor, child: Icon(Icons.cloud_done, color: Colors.white, size: 20)),
+                          leading: const CircleAvatar(
+                            backgroundColor: navyColor, 
+                            child: Icon(Icons.cloud_done, color: Colors.white, size: 20)
+                          ),
                           title: Text(log.title, style: const TextStyle(fontWeight: FontWeight.bold, color: navyColor)),
                           subtitle: Text("${log.description}\n[${log.category}] - ${log.date.split(' ')[0]}"),
                           trailing: Row(
                             mainAxisSize: MainAxisSize.min,
                             children: [
-                              IconButton(icon: const Icon(Icons.edit, color: Colors.blue, size: 20), onPressed: () => _showEditLogDialog(index, log)),
-                              IconButton(icon: const Icon(Icons.delete, color: Colors.red, size: 20), onPressed: () => _controller.removeLog(index)),
+                              IconButton(
+                                icon: const Icon(Icons.edit, color: Colors.blue, size: 20), 
+                                onPressed: () => _showEditLogDialog(index, log)
+                              ),
+                              IconButton(
+                                icon: const Icon(Icons.delete, color: Colors.red, size: 20), 
+                                onPressed: () => _controller.removeLog(index)
+                              ),
                             ],
                           ),
                         ),
