@@ -1,11 +1,26 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
-import 'package:google_fonts/google_fonts.dart'; //
+import 'package:google_fonts/google_fonts.dart';
+import 'package:hive_flutter/hive_flutter.dart';
+
+import 'features/logbook/models/log_model.dart';
 import 'features/onboarding/onboarding_view.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  await dotenv.load(fileName: ".env"); //
+  await dotenv.load(fileName: ".env");
+
+  // INISIALISASI HIVE
+  await Hive.initFlutter(); 
+  
+  // REGISTER ADAPTER (Pastikan .g.dart sudah ada)
+  if (!Hive.isAdapterRegistered(0)) {
+    Hive.registerAdapter(LogModelAdapter()); 
+  }
+
+  // BUKA BOX (Sesuai dengan nama di Controller)
+  await Hive.openBox<LogModel>('offline_logs'); 
+
   runApp(const MyApp());
 }
 
@@ -16,14 +31,12 @@ class MyApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return MaterialApp(
       debugShowCheckedModeBanner: false,
-      title: 'Logbook Nezya',
       theme: ThemeData(
-        useMaterial3: true, // WAJIB untuk UI modern
-        colorSchemeSeed: const Color(0xFF2F4156), // Warna Navy kebanggaan
-        textTheme: GoogleFonts.poppinsTextTheme(), // Pakai font Gen Z
-        scaffoldBackgroundColor: const Color(0xFFF8F9FA), // Background bersih
+        useMaterial3: true,
+        colorSchemeSeed: const Color(0xFF2F4156),
+        textTheme: GoogleFonts.poppinsTextTheme(),
       ),
-      home: const OnboardingView(), //
+      home: const OnboardingView(), 
     );
   }
 }
