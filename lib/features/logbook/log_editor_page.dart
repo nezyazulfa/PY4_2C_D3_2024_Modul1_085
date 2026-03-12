@@ -76,7 +76,7 @@ class _LogEditorPageState extends State<LogEditorPage> {
                 
                 // --- DROPDOWN KATEGORI ---
                 DropdownButtonFormField<String>(
-                  value: _selectedCategory,
+                  initialValue: _selectedCategory,
                   decoration: const InputDecoration(labelText: "Kategori Bidang", border: OutlineInputBorder()),
                   items: _categories.map((cat) => DropdownMenuItem(value: cat, child: Text(cat))).toList(),
                   onChanged: (val) => setState(() => _selectedCategory = val!),
