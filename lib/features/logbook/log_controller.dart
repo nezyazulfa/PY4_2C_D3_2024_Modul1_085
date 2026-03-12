@@ -57,12 +57,14 @@ class LogController {
     }
   }
 
-  Future<void> addLog(String title, String desc, String authorId, String teamId, {bool isPublic = false}) async {
+  Future<void> addLog(String title, String desc, String authorId, String teamId, String category, {bool isPublic = false}) async {
     final newId = ObjectId().oid; 
     final newLog = LogModel(
       id: newId, title: title, description: desc, authorId: authorId, teamId: teamId,
       date: DateFormat('dd-MM-yyyy HH:mm').format(DateTime.now()),
-      isSynced: false, isPublic: isPublic,
+      category: category, // Simpan kategori pilihan user
+      isSynced: false,
+      isPublic: isPublic,
     );
     await _myBox.put(newId, newLog);
     _refreshUI();
@@ -70,7 +72,7 @@ class LogController {
       await _mongoService.insertLog(newLog.toMap());
       await _myBox.put(newId, newLog.copyWith(isSynced: true));
       _refreshUI();
-    } catch (e) { debugPrint("Offline: Saved locally"); }
+    } catch (e) { debugPrint("Atlas offline"); }
   }
 
   Future<void> updateLog(LogModel target, String title, String desc, String category, {bool isPublic = false}) async {

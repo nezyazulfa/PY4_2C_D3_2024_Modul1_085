@@ -56,11 +56,26 @@ class _LogViewState extends State<LogView> {
     );
   }
 
+  // --- UPDATE: CATEGORIZATION & COLOR CODING ---
   Color _getCategoryColor(String category) {
     switch (category) {
-      case 'Urgent': return const Color(0xFFFFE5E5);
-      case 'Pekerjaan': return const Color(0xFFE5F0FF);
-      default: return const Color(0xFFE5FFED);
+      case 'Mechanical':
+        return const Color(0xFFE5FFED); // Hijau (Sesuai tugas)
+      case 'Electronic':
+        return const Color(0xFFE5F0FF); // Biru (Sesuai tugas)
+      case 'Software':
+        return const Color(0xFFFFF7E5); // Amber/Oranye (Warna baru)
+      default:
+        return const Color(0xFFF1F3F5); // Grey untuk lainnya
+    }
+  }
+
+  Color _getIconColor(String category) {
+    switch (category) {
+      case 'Mechanical': return Colors.green;
+      case 'Electronic': return Colors.blue;
+      case 'Software': return Colors.orange;
+      default: return tealColor;
     }
   }
 
@@ -187,7 +202,6 @@ class _LogViewState extends State<LogView> {
     );
   }
 
-  // --- WIDGET BARU: INFORMATIVE EMPTY STATE ---
   Widget _buildEmptyState() {
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 40.0),
@@ -201,7 +215,7 @@ class _LogViewState extends State<LogView> {
               shape: BoxShape.circle,
             ),
             child: const Icon(
-              Icons.auto_stories_rounded, // Ikon buku yang informatif
+              Icons.auto_stories_rounded,
               size: 80,
               color: tealColor,
             ),
@@ -227,7 +241,6 @@ class _LogViewState extends State<LogView> {
             ),
           ),
           const SizedBox(height: 32),
-          // Tombol Call to Action (CTA)
           ElevatedButton.icon(
             onPressed: () => _goToEditor(),
             icon: const Icon(Icons.add_rounded),
@@ -253,7 +266,6 @@ class _LogViewState extends State<LogView> {
           return isOwner || log.isPublic; 
         }).toList();
 
-        // --- UPDATE: MENGGUNAKAN EMPTY STATE ---
         if (displayLogs.isEmpty) {
           return SliverFillRemaining(
             hasScrollBody: false,
@@ -278,16 +290,42 @@ class _LogViewState extends State<LogView> {
                   ),
                   child: ListTile(
                     contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                    // --- INTEGRASI WARNA KATEGORI ---
                     leading: Container(
                       padding: const EdgeInsets.all(10),
-                      decoration: BoxDecoration(color: _getCategoryColor(log.category), borderRadius: BorderRadius.circular(12)),
+                      decoration: BoxDecoration(
+                        color: _getCategoryColor(log.category), 
+                        borderRadius: BorderRadius.circular(12),
+                      ),
                       child: Icon(
                         log.isPublic ? Icons.public : Icons.lock_person, 
-                        color: log.isSynced ? navyColor : Colors.orange,
+                        color: _getIconColor(log.category),
                       ),
                     ),
-                    title: Text(log.title, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
-                    subtitle: Text(log.description, maxLines: 1, overflow: TextOverflow.ellipsis),
+                    title: Text(
+                      log.title, 
+                      style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+                    ),
+                    subtitle: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          log.description, 
+                          maxLines: 1, 
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                        const SizedBox(height: 4),
+                        // Chip kecil untuk menunjukkan nama kategori secara teks
+                        Text(
+                          log.category,
+                          style: TextStyle(
+                            fontSize: 10,
+                            fontWeight: FontWeight.bold,
+                            color: _getIconColor(log.category),
+                          ),
+                        ),
+                      ],
+                    ),
                     trailing: Row(
                       mainAxisSize: MainAxisSize.min,
                       children: [

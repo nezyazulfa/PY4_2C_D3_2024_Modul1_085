@@ -19,6 +19,10 @@ class _LogEditorPageState extends State<LogEditorPage> {
   late TextEditingController _titleController;
   late TextEditingController _descController;
   bool _isPublic = false;
+  
+  // Tambahkan variabel kategori
+  String _selectedCategory = "Software"; 
+  final List<String> _categories = ["Mechanical", "Electronic", "Software"];
 
   @override
   void initState() {
@@ -26,6 +30,7 @@ class _LogEditorPageState extends State<LogEditorPage> {
     _titleController = TextEditingController(text: widget.log?.title ?? '');
     _descController = TextEditingController(text: widget.log?.description ?? '');
     _isPublic = widget.log?.isPublic ?? false;
+    _selectedCategory = widget.log?.category ?? "Software";
     _descController.addListener(() { if (mounted) setState(() {}); });
   }
 
@@ -36,15 +41,14 @@ class _LogEditorPageState extends State<LogEditorPage> {
         await widget.controller.addLog(
           _titleController.text, _descController.text, 
           widget.currentUser['uid'], widget.currentUser['teamId'],
+          _selectedCategory, // Kirim kategori
           isPublic: _isPublic,
         );
       } else {
-        // FIX: Gunakan widget.log! (Objek), bukan widget.index! (Angka)
         await widget.controller.updateLog(
           widget.log!, 
-          _titleController.text, 
-          _descController.text, 
-          widget.log?.category ?? 'Software',
+          _titleController.text, _descController.text, 
+          _selectedCategory, // Update kategori
           isPublic: _isPublic,
         );
       }
@@ -69,17 +73,26 @@ class _LogEditorPageState extends State<LogEditorPage> {
               child: Column(children: [
                 TextField(controller: _titleController, decoration: const InputDecoration(labelText: "Judul")),
                 const SizedBox(height: 16),
+                
+                // --- DROPDOWN KATEGORI ---
+                DropdownButtonFormField<String>(
+                  value: _selectedCategory,
+                  decoration: const InputDecoration(labelText: "Kategori Bidang", border: OutlineInputBorder()),
+                  items: _categories.map((cat) => DropdownMenuItem(value: cat, child: Text(cat))).toList(),
+                  onChanged: (val) => setState(() => _selectedCategory = val!),
+                ),
+                
+                const SizedBox(height: 16),
                 SwitchListTile(
                   title: const Text("Publikasikan ke Tim"),
-                  subtitle: Text(_isPublic ? "Semua anggota tim bisa melihat" : "Hanya Anda yang bisa melihat"),
                   value: _isPublic,
                   onChanged: (val) => setState(() => _isPublic = val),
                 ),
                 const SizedBox(height: 16),
-                TextField(controller: _descController, maxLines: 10, decoration: const InputDecoration(hintText: "Gunakan Markdown...", border: OutlineInputBorder())),
+                TextField(controller: _descController, maxLines: 10, decoration: const InputDecoration(hintText: "Isi Markdown...", border: OutlineInputBorder())),
               ]),
             ),
-            Markdown(data: _descController.text.isEmpty ? "_Tulis sesuatu untuk melihat pratinjau_" : _descController.text),
+            Markdown(data: _descController.text),
           ],
         ),
       ),
