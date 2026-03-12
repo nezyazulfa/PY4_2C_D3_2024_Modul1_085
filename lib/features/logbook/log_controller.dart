@@ -9,26 +9,35 @@ import '../../services/access_control_service.dart';
 class LogController {
   final ValueNotifier<List<LogModel>> logsNotifier = ValueNotifier([]);
   final ValueNotifier<List<LogModel>> filteredLogsNotifier = ValueNotifier([]);
-  
   final MongoService _mongoService = MongoService();
   final _myBox = Hive.box<LogModel>('offline_logs');
 
   Future<void> loadLogs(String teamId) async {
-    _refreshUI();
     try {
       final cloudData = await _mongoService.getLogs(teamId);
+      
+      // Langkah A: Ambil semua ID yang ada di Cloud
+      final cloudIds = cloudData.map((log) => log.id).toSet();
+
+      // Langkah B: Hapus data lokal di Hive yang tidak ada di Cloud 
+      // (Kecuali data yang belum sinkron/isSynced == false)
+      final localKeys = _myBox.keys;
+      for (var key in localKeys) {
+        final localLog = _myBox.get(key);
+        if (localLog != null && localLog.isSynced && !cloudIds.contains(localLog.id)) {
+          await _myBox.delete(key);
+        }
+      }
+
+      // Langkah C: Update/Tambah data dari Cloud ke Hive
       for (var log in cloudData) {
         await _myBox.put(log.id, log.copyWith(isSynced: true)); 
       }
-      final pendingLogs = _myBox.values.where((l) => l.isSynced == false).toList();
-      for (var localLog in pendingLogs) {
-        try {
-          await _mongoService.insertLog(localLog.toMap());
-          await _myBox.put(localLog.id, localLog.copyWith(isSynced: true));
-        } catch (e) { debugPrint("Sync fail: $e"); }
-      }
+      
       _refreshUI();
-    } catch (e) { debugPrint("Offline: $e"); }
+    } catch (e) { 
+      debugPrint("Sync Error: $e"); 
+    }
   }
 
   void _refreshUI() {
@@ -38,19 +47,22 @@ class LogController {
   }
 
   void filterLogs(String query) {
-    filteredLogsNotifier.value = logsNotifier.value
-        .where((log) => log.title.toLowerCase().contains(query.toLowerCase()))
-        .toList();
+    if (query.isEmpty) {
+      filteredLogsNotifier.value = logsNotifier.value;
+    } else {
+      filteredLogsNotifier.value = logsNotifier.value.where((log) {
+        return log.title.toLowerCase().contains(query.toLowerCase()) || 
+               log.description.toLowerCase().contains(query.toLowerCase());
+      }).toList();
+    }
   }
 
-  // UPDATE: Tambah parameter isPublic
   Future<void> addLog(String title, String desc, String authorId, String teamId, {bool isPublic = false}) async {
     final newId = ObjectId().oid; 
     final newLog = LogModel(
       id: newId, title: title, description: desc, authorId: authorId, teamId: teamId,
       date: DateFormat('dd-MM-yyyy HH:mm').format(DateTime.now()),
-      isSynced: false,
-      isPublic: isPublic, // Set sesuai input user
+      isSynced: false, isPublic: isPublic,
     );
     await _myBox.put(newId, newLog);
     _refreshUI();
@@ -58,31 +70,36 @@ class LogController {
       await _mongoService.insertLog(newLog.toMap());
       await _myBox.put(newId, newLog.copyWith(isSynced: true));
       _refreshUI();
-    } catch (e) { debugPrint("Atlas offline"); }
+    } catch (e) { debugPrint("Offline: Saved locally"); }
   }
 
-  // UPDATE: Tambah parameter isPublic
-  Future<void> updateLog(int index, String title, String desc, String category, {bool isPublic = false}) async {
+  Future<void> updateLog(LogModel target, String title, String desc, String category, {bool isPublic = false}) async {
+    final updated = LogModel(
+      id: target.id, title: title, description: desc, authorId: target.authorId,
+      teamId: target.teamId, date: target.date, category: category, isSynced: false, isPublic: isPublic,
+    );
+    await _myBox.put(target.id, updated);
+    _refreshUI();
     try {
-      final target = filteredLogsNotifier.value[index];
-      final updated = LogModel(
-        id: target.id, title: title, description: desc, authorId: target.authorId,
-        teamId: target.teamId, date: target.date, category: category, 
-        isSynced: false, isPublic: isPublic, // Set sesuai input user
-      );
-      await _myBox.put(target.id, updated);
       await _mongoService.updateLog(updated);
-      _refreshUI();
-    } catch (e) { debugPrint("Update fail: $e"); }
+      await _myBox.put(target.id, updated.copyWith(isSynced: true));
+    } catch (e) { debugPrint("Update Cloud Gagal"); }
   }
 
-  Future<void> removeLog(int index, String userRole, String userId) async {
-    final target = filteredLogsNotifier.value[index]; 
-    if (!AccessControlService.canPerform(userRole, 'delete', isOwner: target.authorId == userId)) return; 
+  Future<void> removeLog(LogModel target, String userRole, String userId) async {
+    final bool isOwner = target.authorId == userId;
+    if (!AccessControlService.canPerform(userRole, 'delete', isOwner: isOwner)) return; 
+    
     try {
+      // 1. Hapus Cloud DULU
+      if (target.id != null) {
+        await _mongoService.deleteLog(target.id!);
+      }
+      // 2. Hapus Lokal
       await _myBox.delete(target.id);
-      if (target.id != null) await _mongoService.deleteLog(target.id!);
       _refreshUI();
-    } catch (e) { debugPrint("Delete fail: $e"); }
+    } catch (e) {
+      debugPrint("Gagal hapus permanen. Data mungkin akan muncul lagi saat refresh.");
+    }
   }
 }

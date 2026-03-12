@@ -18,14 +18,14 @@ class LogEditorPage extends StatefulWidget {
 class _LogEditorPageState extends State<LogEditorPage> {
   late TextEditingController _titleController;
   late TextEditingController _descController;
-  bool _isPublic = false; // State status publik
+  bool _isPublic = false;
 
   @override
   void initState() {
     super.initState();
     _titleController = TextEditingController(text: widget.log?.title ?? '');
     _descController = TextEditingController(text: widget.log?.description ?? '');
-    _isPublic = widget.log?.isPublic ?? false; // Ambil nilai awal
+    _isPublic = widget.log?.isPublic ?? false;
     _descController.addListener(() { if (mounted) setState(() {}); });
   }
 
@@ -33,16 +33,17 @@ class _LogEditorPageState extends State<LogEditorPage> {
     if (_titleController.text.isEmpty) return;
     try {
       if (widget.log == null) {
-        // Tambah Baru dengan status isPublic
         await widget.controller.addLog(
           _titleController.text, _descController.text, 
           widget.currentUser['uid'], widget.currentUser['teamId'],
           isPublic: _isPublic,
         );
       } else {
-        // Update dengan status isPublic
+        // FIX: Gunakan widget.log! (Objek), bukan widget.index! (Angka)
         await widget.controller.updateLog(
-          widget.index!, _titleController.text, _descController.text, 
+          widget.log!, 
+          _titleController.text, 
+          _descController.text, 
           widget.log?.category ?? 'Software',
           isPublic: _isPublic,
         );
@@ -68,7 +69,6 @@ class _LogEditorPageState extends State<LogEditorPage> {
               child: Column(children: [
                 TextField(controller: _titleController, decoration: const InputDecoration(labelText: "Judul")),
                 const SizedBox(height: 16),
-                // --- TASK 5: SWITCH PRIVASI ---
                 SwitchListTile(
                   title: const Text("Publikasikan ke Tim"),
                   subtitle: Text(_isPublic ? "Semua anggota tim bisa melihat" : "Hanya Anda yang bisa melihat"),
