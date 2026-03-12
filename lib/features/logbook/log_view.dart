@@ -64,7 +64,6 @@ class _LogViewState extends State<LogView> {
     }
   }
 
-  // --- FUNGSI BARU: KONFIRMASI LOGOUT ---
   void _showLogoutDialog() {
     showDialog(
       context: context,
@@ -79,7 +78,7 @@ class _LogViewState extends State<LogView> {
           ),
           TextButton(
             onPressed: () {
-              Navigator.pop(context); // Tutup dialog
+              Navigator.pop(context); 
               Navigator.pushAndRemoveUntil(
                 context, 
                 MaterialPageRoute(builder: (context) => const LoginView()), 
@@ -142,7 +141,7 @@ class _LogViewState extends State<LogView> {
               ),
               IconButton(
                 icon: const Icon(Icons.logout_rounded, color: Colors.white), 
-                onPressed: _showLogoutDialog, // MEMANGGIL DIALOG KONFIRMASI
+                onPressed: _showLogoutDialog,
                 tooltip: "Logout",
               ),
             ],
@@ -188,6 +187,63 @@ class _LogViewState extends State<LogView> {
     );
   }
 
+  // --- WIDGET BARU: INFORMATIVE EMPTY STATE ---
+  Widget _buildEmptyState() {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 40.0),
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Container(
+            padding: const EdgeInsets.all(24),
+            decoration: BoxDecoration(
+              color: tealColor.withValues(alpha: 0.1),
+              shape: BoxShape.circle,
+            ),
+            child: const Icon(
+              Icons.auto_stories_rounded, // Ikon buku yang informatif
+              size: 80,
+              color: tealColor,
+            ),
+          ),
+          const SizedBox(height: 24),
+          Text(
+            "Belum ada aktivitas hari ini?",
+            textAlign: TextAlign.center,
+            style: GoogleFonts.poppins(
+              fontSize: 18,
+              fontWeight: FontWeight.bold,
+              color: navyColor,
+            ),
+          ),
+          const SizedBox(height: 12),
+          Text(
+            "Mulai catat kemajuan proyek Anda dan bagikan inspirasi kepada tim!",
+            textAlign: TextAlign.center,
+            style: GoogleFonts.poppins(
+              fontSize: 14,
+              color: Colors.grey[600],
+              height: 1.5,
+            ),
+          ),
+          const SizedBox(height: 32),
+          // Tombol Call to Action (CTA)
+          ElevatedButton.icon(
+            onPressed: () => _goToEditor(),
+            icon: const Icon(Icons.add_rounded),
+            label: const Text("Buat Catatan Pertama"),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: navyColor,
+              foregroundColor: Colors.white,
+              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   Widget _buildSliverLogList() {
     return ValueListenableBuilder<List<LogModel>>(
       valueListenable: _controller.filteredLogsNotifier,
@@ -197,10 +253,11 @@ class _LogViewState extends State<LogView> {
           return isOwner || log.isPublic; 
         }).toList();
 
+        // --- UPDATE: MENGGUNAKAN EMPTY STATE ---
         if (displayLogs.isEmpty) {
-          return const SliverFillRemaining(
+          return SliverFillRemaining(
             hasScrollBody: false,
-            child: Center(child: Text("Belum ada cerita hari ini...")),
+            child: _buildEmptyState(),
           );
         }
 
