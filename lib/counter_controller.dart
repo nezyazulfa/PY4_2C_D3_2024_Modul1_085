@@ -1,19 +1,29 @@
 import 'package:shared_preferences/shared_preferences.dart';
 
 class CounterController {
-  int _counter = 0;
-  // Memperbaiki peringatan "unnecessary_getters_setters"
-  // Variabel dijadikan publik (tanpa _) agar bisa diakses langsung oleh Slider di View
-  int step = 1; 
+  int _counter = 0; 
+  
+  int _step = 1; 
   final List<String> _history = [];
 
   int get value => _counter;
   List<String> get history => _history;
+  int get step => _step; 
+
+  // PERBAIKAN TC03 & TC07: 
+  // Menggunakan >= 0 agar angka 0 (untuk reset) diperbolehkan, 
+  // tapi angka negatif tetap diabaikan.
+  set step(int value) {
+    if (value >= 0) { 
+      _step = value;
+    }
+  }
 
   Future<void> loadData(String username) async {
     final prefs = await SharedPreferences.getInstance();
     _counter = prefs.getInt('${username}_counter') ?? 0;
-    // Memuat nilai step yang tersimpan
+    
+    // Memuat nilai step (menggunakan setter agar tervalidasi)
     step = prefs.getInt('${username}_step') ?? 1; 
     
     List<String>? savedHistory = prefs.getStringList('${username}_history');
@@ -28,21 +38,20 @@ class CounterController {
   Future<void> _saveToLocal(String username) async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setInt('${username}_counter', _counter);
-    // Menyimpan nilai step terbaru ke memori HP [cite: 185]
-    await prefs.setInt('${username}_step', step); 
+    await prefs.setInt('${username}_step', _step); 
     await prefs.setStringList('${username}_history', _history);
   }
 
   void increment(String username) {
-    _counter += step; 
-    _addLog("User $username menambah +$step");
+    _counter += _step; 
+    _addLog("User $username menambah +$_step");
     _saveToLocal(username);
   }
 
   void decrement(String username) {
-    if (_counter - step >= 0) {
-      _counter -= step;
-      _addLog("User $username mengurangi -$step");
+    if (_counter - _step >= 0) {
+      _counter -= _step;
+      _addLog("User $username mengurangi -$_step");
     } else {
       _counter = 0; 
       _addLog("User $username mencoba mengurangi di bawah 0");
@@ -50,19 +59,22 @@ class CounterController {
     _saveToLocal(username);
   }
 
+  // PERBAIKAN TC07:
+  // Mengubah step menjadi 0 sesuai ekspektasi di dokumen Excel.
   void reset(String username) {
     _counter = 0;
-    step = 1; 
+    _step = 0; // Langsung ke 0 agar sesuai dengan TC07
     _history.clear();
     _addLog("User $username melakukan reset data");
     _saveToLocal(username);
   }
 
   void _addLog(String action) {
-    // Mengambil jam dan menit saat ini [cite: 246]
     String time = DateTime.now().toString().substring(11, 16);
     _history.insert(0, "$action pada jam $time");
-    // Membatasi riwayat agar tetap rapi (maksimal 5 data) [cite: 246]
-    if (_history.length > 5) _history.removeLast();
+    
+    if (_history.length > 5) {
+      _history.removeLast();
+    }
   }
 }

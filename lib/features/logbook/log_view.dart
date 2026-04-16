@@ -5,8 +5,9 @@ import 'log_controller.dart';
 import 'models/log_model.dart';
 import '../auth/login_view.dart';
 import '../../services/mongo_service.dart';
-import '../../services/access_control_service.dart'; 
 import 'log_editor_page.dart';
+// Import halaman VisionView (Kamera) dari Modul 6
+import '../vision/vision_view.dart'; 
 
 class LogView extends StatefulWidget {
   final Map<String, dynamic> currentUser;
@@ -159,12 +160,37 @@ class _LogViewState extends State<LogView> {
             : _buildSliverLogList(),
         ],
       ),
-      floatingActionButton: FloatingActionButton.extended(
-        backgroundColor: navyColor,
-        onPressed: () => _goToEditor(),
-        icon: const Icon(Icons.add_rounded, color: Colors.white),
-        label: const Text("New Log", style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+      
+      // ==========================================
+      // REVISI MODUL 6: DUA TOMBOL FAB BERJEJER
+      // ==========================================
+      floatingActionButton: Column(
+        mainAxisAlignment: MainAxisAlignment.end,
+        crossAxisAlignment: CrossAxisAlignment.end,
+        children: [
+          // 1. Tombol Buka Kamera
+          FloatingActionButton(
+            heroTag: "camera_btn",
+            backgroundColor: tealColor,
+            onPressed: () => Navigator.push(
+              context, 
+              MaterialPageRoute(builder: (context) => const VisionView())
+            ),
+            child: const Icon(Icons.camera_alt_rounded, color: Colors.white),
+          ),
+          const SizedBox(height: 16),
+          
+          // 2. Tombol Tambah Catatan Baru
+          FloatingActionButton.extended(
+            heroTag: "new_log_btn",
+            backgroundColor: navyColor,
+            onPressed: () => _goToEditor(),
+            icon: const Icon(Icons.add_rounded, color: Colors.white),
+            label: const Text("New Log", style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+          ),
+        ],
       ),
+      // ==========================================
     );
   }
 

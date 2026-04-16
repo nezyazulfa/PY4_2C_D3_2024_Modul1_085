@@ -22,3 +22,13 @@ subprojects {
 tasks.register<Delete>("clean") {
     delete(rootProject.layout.buildDirectory)
 }
+
+// Menyuntikkan library ke semua plugin Android secara aman (tanpa afterEvaluate)
+subprojects {
+    plugins.withId("com.android.library") {
+        dependencies {
+            add("implementation", "androidx.concurrent:concurrent-futures:1.1.0")
+            add("implementation", "com.google.guava:guava:31.1-android")
+        }
+    }
+}

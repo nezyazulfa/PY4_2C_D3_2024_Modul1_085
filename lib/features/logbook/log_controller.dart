@@ -12,6 +12,17 @@ class LogController {
   final MongoService _mongoService = MongoService();
   final _myBox = Hive.box<LogModel>('offline_logs');
 
+  // PERBAIKAN: Constructor untuk memuat data otomatis 
+  LogController() {
+    _refreshUI(); 
+  }
+
+  void _refreshUI() {
+    final data = _myBox.values.toList();
+    logsNotifier.value = data;
+    filteredLogsNotifier.value = data;
+  }
+
   Future<void> loadLogs(String teamId) async {
     try {
       final cloudData = await _mongoService.getLogs(teamId);
@@ -40,11 +51,6 @@ class LogController {
     }
   }
 
-  void _refreshUI() {
-    final data = _myBox.values.toList();
-    logsNotifier.value = data;
-    filteredLogsNotifier.value = data;
-  }
 
   void filterLogs(String query) {
     if (query.isEmpty) {

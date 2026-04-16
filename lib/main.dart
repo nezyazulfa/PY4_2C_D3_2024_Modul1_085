@@ -1,13 +1,29 @@
 import 'package:flutter/material.dart';
+// <-- Tambahan untuk mengatasi error kDebugMode & debugPrint
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:hive_flutter/hive_flutter.dart';
+import 'package:camera/camera.dart';
 
 import 'features/logbook/models/log_model.dart';
 import 'features/onboarding/onboarding_view.dart';
 
+// Variabel global untuk menyimpan daftar kamera
+List<CameraDescription> cameras = [];
+
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
+
+  // === VERIFIKASI KAMERA (MODUL 6 LANGKAH 1) ===
+  try {
+    // Ambil daftar kamera yang tersedia di perangkat
+    cameras = await availableCameras();
+  } on CameraException catch (e) {
+    // Menggunakan debugPrint agar aman saat masuk tahap Production (Rilis)
+    debugPrint('Error: ${e.code}\nError Message: ${e.description}');
+  }
+  // =============================================
+
   await dotenv.load(fileName: ".env");
 
   // INISIALISASI HIVE
