@@ -2,25 +2,47 @@ import 'dart:async';
 import 'dart:math';
 import 'package:camera/camera.dart';
 import 'package:flutter/material.dart';
+import 'package:permission_handler/permission_handler.dart';
 
 class VisionController extends ChangeNotifier with WidgetsBindingObserver {
   CameraController? controller;
   bool isInitialized = false;
   String? errorMessage;
+  bool isPermissionDenied = false;
 
-  // Variabel untuk Task 4 (Simulasi Koordinat AI YOLO)
-  double mockX = 0.5; // Titik tengah (0.0 sampai 1.0)
+  // Variabel Task 4 & Homework (Simulasi Koordinat & Tipe Kerusakan AI YOLO)
+  double mockX = 0.5;
   double mockY = 0.5; 
+  String mockDamageType = 'D40'; // Variabel Baru untuk Tipe Kerusakan
+  
   Timer? _mockTimer;
   final Random _random = Random();
+
+  bool isFlashOn = false;
+  bool isOverlayVisible = true;
 
   VisionController() {
     WidgetsBinding.instance.addObserver(this);
     initCamera();
   }
 
+  Future<void> openSettings() async {
+    await openAppSettings();
+  }
+
   Future<void> initCamera() async {
+    isPermissionDenied = false;
+    errorMessage = null;
+    notifyListeners();
+
     try {
+      var status = await Permission.camera.request();
+      if (status.isPermanentlyDenied || status.isDenied) {
+        isPermissionDenied = true;
+        notifyListeners();
+        return;
+      }
+
       final cameras = await availableCameras();
       if (cameras.isEmpty) {
         errorMessage = "No camera detected on device.";
@@ -38,48 +60,73 @@ class VisionController extends ChangeNotifier with WidgetsBindingObserver {
       isInitialized = true;
       errorMessage = null;
       
-      // MULAI SIMULASI MOCK DETECTOR (Task 4)
       _startMockDetection();
-
     } catch (e) {
       errorMessage = "Failed to initialize camera: $e";
     }
     notifyListeners();
   }
 
-  // Fungsi mengubah koordinat setiap 3 detik secara dinamis
   void _startMockDetection() {
     _mockTimer?.cancel();
     _mockTimer = Timer.periodic(const Duration(seconds: 3), (timer) {
-      // Menghasilkan angka acak antara 0.2 hingga 0.8 agar kotak tidak terlalu ke pinggir
       mockX = 0.2 + _random.nextDouble() * 0.6; 
       mockY = 0.2 + _random.nextDouble() * 0.6;
-      notifyListeners(); // Memaksa UI untuk menggambar ulang (Mencegah Flicker)
+      
+      // LOGIKA BARU: Mengacak tipe kerusakan 50:50 (D40 atau D00)
+      mockDamageType = _random.nextBool() ? 'D40' : 'D00';
+      
+      notifyListeners(); 
     });
   }
 
-  // RESOURCE GUARD: Penanganan saat aplikasi masuk ke Background
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
     final CameraController? cameraController = controller;
     if (cameraController == null || !cameraController.value.isInitialized) return;
 
     if (state == AppLifecycleState.inactive || state == AppLifecycleState.paused) {
-      // Mematikan kamera dan timer saat aplikasi tidak terlihat
       _mockTimer?.cancel();
       cameraController.dispose();
       isInitialized = false;
       notifyListeners();
     } else if (state == AppLifecycleState.resumed) {
-      initCamera(); // Nyalakan ulang saat aplikasi dibuka kembali
+      initCamera();
     }
   }
 
   @override
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
-    _mockTimer?.cancel(); // Mencegah memory leak dari timer
-    controller?.dispose(); // Membunuh proses kamera sepenuhnya
+    _mockTimer?.cancel(); 
+    controller?.dispose(); 
     super.dispose();
+  }
+
+  Future<void> toggleFlash() async {
+    if (controller == null || !controller!.value.isInitialized) return;
+    try {
+      isFlashOn = !isFlashOn;
+      await controller!.setFlashMode(isFlashOn ? FlashMode.torch : FlashMode.off);
+      notifyListeners();
+    } catch (e) {
+      debugPrint("Gagal menyalakan senter: $e");
+    }
+  }
+
+  void toggleOverlay() {
+    isOverlayVisible = !isOverlayVisible;
+    notifyListeners();
+  }
+  
+  Future<XFile?> takePhoto() async {
+    if (controller == null || !controller!.value.isInitialized) return null;
+    if (controller!.value.isTakingPicture) return null; 
+    try {
+      return await controller!.takePicture();
+    } catch (e) {
+      debugPrint("Gagal mengambil foto: $e");
+      return null;
+    }
   }
 }

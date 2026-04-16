@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'vision_controller.dart';
 import 'damage_painter.dart';
 import 'package:camera/camera.dart';
+import 'dart:io';
 
 class VisionView extends StatefulWidget {
   const VisionView({super.key});
@@ -21,7 +22,7 @@ class _VisionViewState extends State<VisionView> {
 
   @override
   void dispose() {
-    _visionController.dispose(); // Mencegah memory leak [cite: 249]
+    _visionController.dispose();
     super.dispose();
   }
 
@@ -29,23 +30,99 @@ class _VisionViewState extends State<VisionView> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text("Smart-Patrol Vision"),
+        title: const Text(
+          "Smart-Patrol Vision",
+          style: TextStyle(fontWeight: FontWeight.bold), // Tambah bold biar makin tegas
+        ),
         backgroundColor: const Color(0xFF2F4156),
+        foregroundColor: Colors.white, // BARIS INI: Mengubah teks dan tombol back jadi putih
       ),
       body: ListenableBuilder(
         listenable: _visionController,
         builder: (context, child) {
-          if (!_visionController.isInitialized) {
-            return const Center(child: CircularProgressIndicator());
+          // STATE 1: Izin Kamera Ditolak
+          if (_visionController.isPermissionDenied) {
+            return _buildPermissionError();
           }
+          
+          // STATE 2: Sedang Loading / Inisialisasi
+          if (!_visionController.isInitialized && _visionController.errorMessage == null) {
+            return _buildLoadingState();
+          }
+
+          // STATE 3: Error Hardware Lainnya
+          if (_visionController.errorMessage != null) {
+            return Center(child: Text(_visionController.errorMessage!));
+          }
+
+          // STATE 4: Berhasil (Tampilkan Kamera)
           return _buildVisionStack();
         },
       ),
     );
   }
 
+  // ==========================================
+  // WIDGET BARU: Feedback UI States
+  // ==========================================
+  Widget _buildLoadingState() {
+    return Center(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          const CircularProgressIndicator(
+            color: Color(0xFF2F4156),
+            strokeWidth: 5,
+          ),
+          const SizedBox(height: 20),
+          Text(
+            "Menghubungkan ke Sensor Visual...",
+            style: TextStyle(color: Colors.grey.shade700, fontWeight: FontWeight.w500),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildPermissionError() {
+    return Container(
+      padding: const EdgeInsets.all(30),
+      child: Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            const Icon(Icons.no_photography_outlined, size: 80, color: Colors.redAccent),
+            const SizedBox(height: 20),
+            const Text(
+              "No Camera Access",
+              style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
+            ),
+            const SizedBox(height: 10),
+            const Text(
+              "Aplikasi memerlukan izin kamera untuk mendeteksi kerusakan jalan. Silakan aktifkan di pengaturan.",
+              textAlign: TextAlign.center,
+              style: TextStyle(color: Colors.grey),
+            ),
+            const SizedBox(height: 30),
+            ElevatedButton.icon(
+              onPressed: () => _visionController.openSettings(),
+              icon: const Icon(Icons.settings),
+              label: const Text("Open Settings"),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: const Color(0xFF2F4156),
+                foregroundColor: Colors.white,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  // ==========================================
+  // LAYER TAMPILAN UTAMA
+  // ==========================================
   Widget _buildVisionStack() {
-    // LayoutBuilder memastikan kita mendapatkan ukuran layar yang valid [cite: 286]
     return LayoutBuilder(
       builder: (context, constraints) {
         return Stack(
@@ -63,14 +140,99 @@ class _VisionViewState extends State<VisionView> {
               ),
             ),
 
-            // LAYER 2: Overlay Deteksi (Task 4)
-            Positioned.fill(
-              child: CustomPaint(
-                // Melewatkan koordinat mock agar bisa bergerak dinamis [cite: 309]
-                painter: DamagePainter(
-                  mockX: _visionController.mockX,
-                  mockY: _visionController.mockY,
+            // LAYER 2: Overlay Deteksi
+            // LAYER 2: Overlay Deteksi
+            if (_visionController.isOverlayVisible)
+              Positioned.fill(
+                child: CustomPaint(
+                  painter: DamagePainter(
+                    mockX: _visionController.mockX,
+                    mockY: _visionController.mockY,
+                    damageType: _visionController.mockDamageType, // BARIS BARU
+                  ),
                 ),
+              ),
+
+            // LAYER 3: Tombol Capture
+            Positioned(
+              bottom: 40,
+              left: 0,
+              right: 0,
+              child: Center(
+                child: InkWell(
+                  onTap: () async {
+                    final file = await _visionController.takePhoto();
+                    if (file != null && context.mounted) {
+                      showDialog(
+                        context: context,
+                        builder: (context) => AlertDialog(
+                          title: const Text("Hasil Tangkapan"),
+                          content: Column(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              ClipRRect(
+                                borderRadius: BorderRadius.circular(10),
+                                child: Image.file(File(file.path)),
+                              ),
+                              const SizedBox(height: 10),
+                              Text("Lokasi: ${file.path.split('/').last}"),
+                            ],
+                          ),
+                          actions: [
+                            TextButton(
+                              onPressed: () => Navigator.pop(context),
+                              child: const Text("Tutup"),
+                            ),
+                          ],
+                        ),
+                      );
+                    }
+                  },
+                  child: Container(
+                    padding: const EdgeInsets.all(4),
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      border: Border.all(color: Colors.white, width: 4),
+                    ),
+                    child: Container(
+                      width: 65, height: 65,
+                      decoration: const BoxDecoration(
+                        color: Colors.white70, shape: BoxShape.circle,
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            ),
+
+            // LAYER 4: Kontrol Hardware & UI
+            Positioned(
+              top: 40,
+              right: 20,
+              child: Column(
+                children: [
+                  Container(
+                    decoration: const BoxDecoration(color: Colors.black54, shape: BoxShape.circle),
+                    child: IconButton(
+                      icon: Icon(
+                        _visionController.isFlashOn ? Icons.flash_on : Icons.flash_off,
+                        color: _visionController.isFlashOn ? Colors.yellow : Colors.white,
+                      ),
+                      onPressed: () => _visionController.toggleFlash(),
+                    ),
+                  ),
+                  const SizedBox(height: 15),
+                  Container(
+                    decoration: const BoxDecoration(color: Colors.black54, shape: BoxShape.circle),
+                    child: IconButton(
+                      icon: Icon(
+                        _visionController.isOverlayVisible ? Icons.visibility : Icons.visibility_off,
+                        color: _visionController.isOverlayVisible ? Colors.tealAccent : Colors.white,
+                      ),
+                      onPressed: () => _visionController.toggleOverlay(),
+                    ),
+                  ),
+                ],
               ),
             ),
           ],
