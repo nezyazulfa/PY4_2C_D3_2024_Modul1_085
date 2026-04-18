@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 // <-- Tambahan untuk mengatasi error kDebugMode & debugPrint
-import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:hive_flutter/hive_flutter.dart';
 import 'package:camera/camera.dart';
@@ -24,7 +23,7 @@ Future<void> main() async {
   }
   // =============================================
 
-  await dotenv.load(fileName: ".env");
+  //await dotenv.load(fileName: ".env");
 
   // INISIALISASI HIVE
   await Hive.initFlutter(); 

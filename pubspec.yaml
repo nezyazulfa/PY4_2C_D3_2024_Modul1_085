@@ -25,6 +25,7 @@ dependencies:
   lottie: ^3.1.0        # Opsional, kalau mau pakai animasi gerak
   camera: ^0.12.0
   permission_handler: ^12.0.1
+  image: ^4.8.0
 
 dev_dependencies:
   flutter_test:
@@ -41,4 +42,3 @@ flutter:
     - assets/Gambar1.png
     - assets/Gambar2.png
     - assets/Gambar3.png
-    - .env

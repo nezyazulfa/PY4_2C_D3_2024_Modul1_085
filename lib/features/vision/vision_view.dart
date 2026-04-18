@@ -2,7 +2,8 @@ import 'package:flutter/material.dart';
 import 'vision_controller.dart';
 import 'damage_painter.dart';
 import 'package:camera/camera.dart';
-import 'dart:io';
+import 'dart:typed_data';
+import 'pcd_service.dart';
 
 class VisionView extends StatefulWidget {
   const VisionView({super.key});
@@ -162,29 +163,129 @@ class _VisionViewState extends State<VisionView> {
                 child: InkWell(
                   onTap: () async {
                     final file = await _visionController.takePhoto();
+                    
                     if (file != null && context.mounted) {
+                      Uint8List currentImageBytes = PCDService.getOriginalBytes(file.path);
+                      
+                      // Variabel untuk melacak filter mana yang sedang aktif
+                      String activeFilter = 'Original';
+
                       showDialog(
                         context: context,
-                        builder: (context) => AlertDialog(
-                          title: const Text("Hasil Tangkapan"),
-                          content: Column(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              ClipRRect(
-                                borderRadius: BorderRadius.circular(10),
-                                child: Image.file(File(file.path)),
-                              ),
-                              const SizedBox(height: 10),
-                              Text("Lokasi: ${file.path.split('/').last}"),
-                            ],
-                          ),
-                          actions: [
-                            TextButton(
-                              onPressed: () => Navigator.pop(context),
-                              child: const Text("Tutup"),
-                            ),
-                          ],
-                        ),
+                        builder: (context) {
+                          return StatefulBuilder(
+                            builder: (context, setStateDialog) {
+                              // Fungsi pembantu biar kode tombol rapi (ChoiceChip ala Instagram)
+                              Widget buildFilterChip(String label, VoidCallback onSelect) {
+                                final isSelected = activeFilter == label;
+                                return Padding(
+                                  padding: const EdgeInsets.only(right: 8.0),
+                                  child: ChoiceChip(
+                                    label: Text(label),
+                                    selected: isSelected,
+                                    onSelected: (bool selected) {
+                                      if (!isSelected) {
+                                        setStateDialog(() {
+                                          activeFilter = label;
+                                          onSelect();
+                                        });
+                                      }
+                                    },
+                                    selectedColor: Colors.blue.shade100,
+                                    labelStyle: TextStyle(
+                                      fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+                                      color: isSelected ? Colors.blue.shade900 : Colors.black87,
+                                    ),
+                                  ),
+                                );
+                              }
+
+                              return Dialog(
+                                // Bikin margin lebih tipis biar pop-up makin lebar
+                                insetPadding: const EdgeInsets.symmetric(horizontal: 10, vertical: 20),
+                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
+                                child: Padding(
+                                  padding: const EdgeInsets.all(15.0),
+                                  child: Column(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      // --- HEADER ---
+                                      Row(
+                                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                        children: [
+                                          const Text("Vision Enhancer", style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+                                          IconButton(
+                                            icon: const Icon(Icons.close),
+                                            onPressed: () => Navigator.pop(context),
+                                          ),
+                                        ],
+                                      ),
+                                      const SizedBox(height: 10),
+
+                                      // --- PREVIEW GAMBAR (BESAR & BISA DI-ZOOM) ---
+                                      // Flexible bikin gambar menempati sisa ruang kosong secara otomatis
+                                      Flexible(
+                                        child: ClipRRect(
+                                          borderRadius: BorderRadius.circular(10),
+                                          child: InteractiveViewer(
+                                            // Fitur rahasia: Pinch to Zoom (sampai 5x lipat)
+                                            maxScale: 5.0,
+                                            child: Image.memory(
+                                              currentImageBytes,
+                                              fit: BoxFit.contain, // Gambar utuh, tidak terpotong
+                                            ),
+                                          ),
+                                        ),
+                                      ),
+                                      const SizedBox(height: 15),
+
+                                      // --- MENU FILTER (SCROLL HORIZONTAL) ---
+                                      SizedBox(
+                                        height: 45, // Tinggi baris filter
+                                        child: ListView(
+                                          scrollDirection: Axis.horizontal,
+                                          physics: const BouncingScrollPhysics(),
+                                          children: [
+                                            buildFilterChip("Original", () {
+                                              currentImageBytes = PCDService.getOriginalBytes(file.path);
+                                            }),
+                                            buildFilterChip("Grayscale", () {
+                                              currentImageBytes = PCDService.applyGrayscale(file.path);
+                                            }),
+                                            buildFilterChip("Negatif", () {
+                                              currentImageBytes = PCDService.applyInversion(file.path);
+                                            }),
+                                            buildFilterChip("Bright/Cont", () {
+                                              currentImageBytes = PCDService.applyBrightnessContrast(file.path, brightness: 1.2, contrast: 1.5);
+                                            }),
+                                            buildFilterChip("Gamma 0.5", () {
+                                              currentImageBytes = PCDService.applyGammaCorrection(file.path, gamma: 0.5);
+                                            }),
+                                            buildFilterChip("Equalize", () {
+                                              currentImageBytes = PCDService.applyHistogramEqualization(file.path);
+                                            }),
+                                            buildFilterChip("Gaussian Blur", () {
+                                              currentImageBytes = PCDService.applyGaussianFilter(file.path, radius: 3);
+                                            }),
+                                            buildFilterChip("Sobel (Edge)", () {
+                                              currentImageBytes = PCDService.applySobelFilter(file.path);
+                                            }),
+                                            buildFilterChip("Median (Anti-Noise)", () {
+                                              currentImageBytes = PCDService.applyMedianFilter(file.path);
+                                            }),
+                                            buildFilterChip("Spectrum (FFT)", () {
+                                              currentImageBytes = PCDService.applyFourierSpectrum(file.path);
+                                            }),
+                                          ],
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              );
+                            }
+                          );
+                        },
                       );
                     }
                   },
